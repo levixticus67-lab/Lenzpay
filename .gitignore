@@ -4,6 +4,7 @@ client/dist/
 .env
 .env.*
 !.env.example
+!client/.env.example
 coverage/
 .DS_Store
 npm-debug.log*

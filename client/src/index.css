@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  background: #080b14;
+  color: #edf0fa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #080b14; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+::selection { background: rgba(125, 140, 255, .32); }
+
+.app-backdrop {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(61, 78, 190, .17), transparent 34rem),
+    radial-gradient(ellipse at 93% 15%, rgba(130, 63, 204, .13), transparent 32rem),
+    #080b14;
+}
+
+.glass {
+  background: rgba(16, 21, 34, .72);
+  border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .16);
+  backdrop-filter: blur(18px);
+}
+
+.field {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(6, 9, 17, .62);
+  color: #eef0f8;
+  border-radius: .8rem;
+  padding: .72rem .85rem;
+  outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.field:focus { border-color: rgba(129, 140, 248, .72); box-shadow: 0 0 0 3px rgba(99, 102, 241, .12); }
+.field::placeholder { color: #656d80; }
+.field option { background: #101522; }
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border: 1px solid rgba(180, 188, 255, .22);
+  border-radius: .8rem;
+  padding: .68rem 1rem;
+  background: linear-gradient(135deg, #6576ed, #8156ce);
+  color: white;
+  font-weight: 700;
+  transition: transform .15s ease, filter .15s ease;
+}
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .58; cursor: wait; transform: none; }
+.btn-quiet {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid rgba(255, 255, 255, .1); border-radius: .75rem;
+  padding: .62rem .85rem; background: rgba(255,255,255,.035); color: #cbd2e1;
+  transition: background .15s, border-color .15s;
+}
+.btn-quiet:hover { background: rgba(255,255,255,.075); border-color: rgba(255,255,255,.18); }
+
+.scrollbar-soft::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-soft::-webkit-scrollbar-thumb { background: #32394a; border-radius: 99px; }
