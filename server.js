@@ -10,9 +10,11 @@ import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
 import { merchantsRouter } from './routes/merchants.js';
 import { requireAdmin, requireAllowedAdminOrigin } from './middleware/auth.js';
+import { startReconciliationWorker } from './services/reconciliation.js';
 
 const env = getEnv();
 const app = express();
+let reconciliationTimer;
 
 if (env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -62,6 +64,7 @@ const server = app.listen(env.PORT, async () => {
   try {
     await prisma.$connect();
     console.log(`Lenzpay API listening on port ${env.PORT}`);
+    reconciliationTimer = startReconciliationWorker();
   } catch (error) {
     console.error(JSON.stringify({ level: 'error', code: 'DATABASE_CONNECTION_FAILED', name: error.name }));
     server.close(() => process.exit(1));
@@ -70,6 +73,7 @@ const server = app.listen(env.PORT, async () => {
 
 async function shutdown(signal) {
   console.log(`Received ${signal}; shutting down`);
+  if (reconciliationTimer) clearInterval(reconciliationTimer);
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);

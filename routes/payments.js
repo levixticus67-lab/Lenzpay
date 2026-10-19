@@ -218,13 +218,21 @@ paymentsRouter.post(
       if (!current) return 'NOT_FOUND';
 
       let finalOutcome = verifiedStatus;
-      if (current.status === 'PENDING' && verifiedStatus !== 'PENDING') {
-        const updated = await tx.paymentTransaction.update({
-          where: { id: current.id },
-          data: { status: verifiedStatus },
+      if (current.status === 'PENDING') {
+        const changed = await tx.paymentTransaction.updateMany({
+          where: { id: current.id, status: 'PENDING' },
+          data: {
+            lastStatusCheckAt: new Date(),
+            ...(verifiedStatus === 'PENDING' ? {} : { status: verifiedStatus }),
+          },
         });
-        if (verifiedStatus === 'SUCCESSFUL') await postSplitLedger(tx, updated);
-      } else if (current.status !== 'PENDING' && current.status !== verifiedStatus) {
+        if (changed.count === 1 && verifiedStatus === 'SUCCESSFUL') {
+          const updated = await tx.paymentTransaction.findUnique({ where: { id: current.id } });
+          await postSplitLedger(tx, updated);
+        } else if (changed.count === 0) {
+          finalOutcome = 'TERMINAL_STATE_UNCHANGED';
+        }
+      } else if (current.status !== verifiedStatus) {
         finalOutcome = 'TERMINAL_STATE_UNCHANGED';
       }
 

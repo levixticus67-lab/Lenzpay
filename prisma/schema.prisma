@@ -73,6 +73,7 @@ model PaymentTransaction {
   telecomTransactionRef String            @unique @map("telecom_transaction_ref")
   payoutPhone           String            @map("payout_phone")
   payoutProvider        PaymentProvider   @map("payout_provider")
+  lastStatusCheckAt     DateTime?         @map("last_status_check_at")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   merchant              Merchant          @relation(fields: [merchantId], references: [id], onDelete: Restrict)
@@ -81,6 +82,7 @@ model PaymentTransaction {
 
   @@unique([merchantId, orderId])
   @@index([status, createdAt])
+  @@index([status, lastStatusCheckAt])
   @@index([merchantId, createdAt])
   @@map("transactions")
 }

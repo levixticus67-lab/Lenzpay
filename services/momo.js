@@ -10,6 +10,8 @@ class ProviderError extends Error {
   }
 }
 
+let tokenCache = { accessToken: null, expiresAt: 0 };
+
 function mtnBaseUrl() {
   return getEnv().MTN_TARGET_ENV === 'production'
     ? 'https://proxy.momoapi.mtn.com'
@@ -32,6 +34,9 @@ async function requestJson(url, options, stage) {
 }
 
 async function getAccessToken() {
+  if (tokenCache.accessToken && tokenCache.expiresAt > Date.now() + 30_000) {
+    return tokenCache.accessToken;
+  }
   const env = getEnv();
   const basic = Buffer.from(`${env.MTN_API_USER}:${env.MTN_API_KEY}`).toString('base64');
   const token = await requestJson(
@@ -46,6 +51,10 @@ async function getAccessToken() {
     'authentication',
   );
   if (!token.access_token) throw new ProviderError('authentication', 502);
+  tokenCache = {
+    accessToken: token.access_token,
+    expiresAt: Date.now() + Math.max(1, Number(token.expires_in) || 300) * 1000,
+  };
   return token.access_token;
 }
 

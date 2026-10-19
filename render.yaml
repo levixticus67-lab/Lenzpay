@@ -31,6 +31,10 @@ services:
         value: "100"
       - key: MAX_PAYMENT_AMOUNT
         value: "10000000"
+      - key: RECONCILIATION_INTERVAL_SECONDS
+        value: "60"
+      - key: RECONCILIATION_BATCH_SIZE
+        value: "20"
       - key: PAYMENT_WEBHOOK_BASE_URL
         value: https://lenzpay-api.onrender.com
       - key: MTN_TARGET_ENV

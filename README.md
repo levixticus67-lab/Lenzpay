@@ -12,12 +12,13 @@ Lenzpay is a multi-tenant mobile-money collection API and operator/developer das
 - MTN MoMo RequestToPay and Airtel Money collection adapters. Both default to sandbox.
 - Provider-status lookup before any callback can make a transaction successful.
 - Atomic, replay-safe commission/net ledger posting.
+- A bounded background reconciliation worker checks stale pending collections with provider status APIs.
 - Admin login, merchant registration/key rotation, overview totals, and a polling transaction stream.
 - A Vercel rewrite to the Render API so dashboard requests and the HttpOnly admin cookie can use the same browser origin.
 
 ## Local development
 
-Requirements: Node.js 20+, npm, and a PostgreSQL database. Create `../`? Copy `.env.example` to `.env` in this directory and fill the required local settings.
+Requirements: Node.js 20+, npm, and a PostgreSQL database. Copy `.env.example` to `.env` in this directory and fill the required local settings.
 
 ```sh
 cp .env.example .env
@@ -136,11 +137,13 @@ Provider account activation and API access are controlled by the providers. Lenz
 4. Have the client backend call the checkout endpoint. Return only an order/payment identifier to its user interface and poll the merchant-scoped GET endpoint from the backend as needed.
 5. Check the dashboard transaction stream. A verified successful collection writes the agency and merchant split ledger entries exactly once.
 
+The API also rechecks older `PENDING` transactions on a bounded schedule (`RECONCILIATION_INTERVAL_SECONDS`, default 60 seconds; at most `RECONCILIATION_BATCH_SIZE`, default 20, per pass). It queries the provider, never retries the collection request, and uses the same idempotent ledger update as a webhook. Monitor the `webhook_events` reconciliation outcomes and alert on unusually old pending payments.
+
 ## Go-live checklist
 
 - Complete provider production onboarding and confirm the collection API base URL, credentials, currency, country, callback registration, and production limits with each provider.
 - Test with provider sandbox first, then run an approved low-value end-to-end production test. Confirm callback verification and the final provider status before reconciling balances.
-- Configure backups, monitoring/alerts, stale-pending reconciliation, incident procedures, access controls, and key-rotation procedures.
+- Configure backups, monitoring/alerts, stale-pending reconciliation monitoring, incident procedures, access controls, and key-rotation procedures.
 - Confirm commissions, refunds/reversals, chargebacks, settlement timelines, and any regulatory or legal obligations with your payment providers and advisors.
 - Do not enable a merchant for production until provider production credentials exist and the intended funds flow is verified. The `app_live_...` client ID means the credential is active; it does **not** mean provider production mode is enabled.
 - Implement an actual provider disbursement/payout workflow separately if you need funds sent automatically. Current ledger records do not move money.

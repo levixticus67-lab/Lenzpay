@@ -10,6 +10,8 @@ class ProviderError extends Error {
   }
 }
 
+let tokenCache = { accessToken: null, expiresAt: 0 };
+
 function airtelBaseUrl() {
   return getEnv().AIRTEL_ENV === 'production'
     ? 'https://openapi.airtel.africa'
@@ -32,6 +34,9 @@ async function requestJson(url, options, stage) {
 }
 
 async function getAccessToken() {
+  if (tokenCache.accessToken && tokenCache.expiresAt > Date.now() + 30_000) {
+    return tokenCache.accessToken;
+  }
   const env = getEnv();
   const result = await requestJson(
     `${airtelBaseUrl()}/auth/oauth2/token`,
@@ -47,6 +52,10 @@ async function getAccessToken() {
     'authentication',
   );
   if (!result.access_token) throw new ProviderError('authentication', 502);
+  tokenCache = {
+    accessToken: result.access_token,
+    expiresAt: Date.now() + Math.max(1, Number(result.expires_in) || 300) * 1000,
+  };
   return result.access_token;
 }
 
