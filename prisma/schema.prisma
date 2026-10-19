@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MerchantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PaymentProvider {
+  MTN
+  AIRTEL
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+}
+
+enum LedgerKind {
+  AGENCY_COMMISSION
+  MERCHANT_NET
+}
+
+model Merchant {
+  id                    String               @id @default(cuid())
+  name                  String
+  email                 String
+  agencyCommissionRate  Decimal              @default(0.025) @map("agency_commission_rate") @db.Decimal(8, 6)
+  defaultPayoutPhone    String               @map("default_payout_phone")
+  defaultPayoutProvider PaymentProvider      @map("default_payout_provider")
+  status                MerchantStatus       @default(ACTIVE)
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  credentials           ApiCredential[]
+  transactions          PaymentTransaction[]
+  ledgerEntries         LedgerEntry[]
+
+  @@index([status, createdAt])
+  @@map("merchants")
+}
+
+model ApiCredential {
+  id               String    @id @default(cuid())
+  clientId         String    @unique @map("client_id")
+  clientSecretHash String    @map("client_secret_hash")
+  liveStatus       Boolean   @default(true) @map("live_status")
+  revokedAt        DateTime? @map("revoked_at")
+  merchantId       String    @map("merchant_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  merchant         Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, liveStatus])
+  @@map("api_credentials")
+}
+
+model PaymentTransaction {
+  id                    String            @id @default(uuid())
+  orderId               String            @map("order_id")
+  merchantId            String            @map("merchant_id")
+  totalAmount           Decimal           @map("total_amount") @db.Decimal(18, 2)
+  commissionAmount      Decimal           @map("commission_amount") @db.Decimal(18, 2)
+  merchantAmount        Decimal           @map("merchant_amount") @db.Decimal(18, 2)
+  payerPhone            String            @map("payer_phone")
+  provider              PaymentProvider
+  status                TransactionStatus @default(PENDING)
+  telecomTransactionRef String            @unique @map("telecom_transaction_ref")
+  payoutPhone           String            @map("payout_phone")
+  payoutProvider        PaymentProvider   @map("payout_provider")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  merchant              Merchant          @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  ledgerEntries         LedgerEntry[]
+  webhookEvents         WebhookEvent[]
+
+  @@unique([merchantId, orderId])
+  @@index([status, createdAt])
+  @@index([merchantId, createdAt])
+  @@map("transactions")
+}
+
+model LedgerEntry {
+  id            String             @id @default(cuid())
+  transactionId String             @map("transaction_id")
+  merchantId    String             @map("merchant_id")
+  kind          LedgerKind
+  amount        Decimal            @db.Decimal(18, 2)
+  currency      String             @default("UGX")
+  destination   String
+  createdAt     DateTime           @default(now()) @map("created_at")
+  transaction   PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  merchant      Merchant           @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+
+  @@unique([transactionId, kind])
+  @@index([merchantId, kind, createdAt])
+  @@map("ledger_entries")
+}
+
+model WebhookEvent {
+  id                String              @id @default(cuid())
+  provider          PaymentProvider
+  providerReference String              @map("provider_reference")
+  transactionId     String?             @map("transaction_id")
+  outcome           String
+  receivedAt        DateTime            @default(now()) @map("received_at")
+  transaction       PaymentTransaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([provider, providerReference, receivedAt])
+  @@map("webhook_events")
+}
