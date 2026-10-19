@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: lenzpay-api
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run db:generate
+    startCommand: npm run db:migrate && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CLIENT_SECRET_PEPPER
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: AGENCY_COMMISSION_WALLET_MSISDN
+        sync: false
+      - key: DEVELOPER_COMMISSION_RATE
+        value: "0.025"
+      - key: MIN_PAYMENT_AMOUNT
+        value: "100"
+      - key: MAX_PAYMENT_AMOUNT
+        value: "10000000"
+      - key: PAYMENT_WEBHOOK_BASE_URL
+        value: https://lenzpay-api.onrender.com
+      - key: MTN_TARGET_ENV
+        value: sandbox
+      - key: AIRTEL_ENV
+        value: sandbox

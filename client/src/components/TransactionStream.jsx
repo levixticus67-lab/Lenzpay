@@ -46,7 +46,7 @@ export default function TransactionStream() {
         </div>
         <div className="scrollbar-soft overflow-x-auto">
           <table className="w-full min-w-[930px] text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-6 py-3 font-semibold">Order ID / Client app</th><th className="px-4 py-3 font-semibold">Total amount</th><th className="px-4 py-3 font-semibold">2.5% fee cut</th><th className="px-4 py-3 font-semibold">Merchant net</th><th className="px-4 py-3 font-semibold">Provider</th><th className="px-6 py-3 font-semibold">Status / Time</th></tr></thead>
+            <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-6 py-3 font-semibold">Order ID / Client app</th><th className="px-4 py-3 font-semibold">Total amount</th><th className="px-4 py-3 font-semibold">Fee cut</th><th className="px-4 py-3 font-semibold">Merchant net</th><th className="px-4 py-3 font-semibold">Provider</th><th className="px-6 py-3 font-semibold">Status / Time</th></tr></thead>
             <tbody className="divide-y divide-white/[.05]">
               {visible.map((item) => (
                 <tr key={item.id} className="hover:bg-white/[.02]">

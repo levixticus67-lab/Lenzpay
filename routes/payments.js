@@ -249,3 +249,19 @@ paymentsRouter.post(
     });
   }),
 );
+
+paymentsRouter.get(
+  '/:transactionId',
+  checkoutLimiter,
+  authenticateClient,
+  asyncHandler(async (req, res) => {
+    const transaction = await prisma.paymentTransaction.findFirst({
+      where: {
+        id: req.params.transactionId,
+        merchantId: req.apiClient.merchant.id,
+      },
+    });
+    if (!transaction) throw new HttpError(404, 'TRANSACTION_NOT_FOUND', 'Payment was not found for this merchant');
+    res.json(checkoutResult(transaction));
+  }),
+);

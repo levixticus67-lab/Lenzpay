@@ -27,8 +27,9 @@ adminRouter.post('/login', requireAllowedAdminOrigin, adminLoginLimiter, asyncHa
   ) {
     throw new HttpError(401, 'INVALID_LOGIN', 'Email or password is incorrect');
   }
-  setAdminCookie(res, createAdminSession(parsed.data.email));
-  res.json({ email: parsed.data.email });
+  const canonicalEmail = getEnv().ADMIN_EMAIL;
+  setAdminCookie(res, createAdminSession(canonicalEmail));
+  res.json({ email: canonicalEmail });
 }));
 
 adminRouter.get('/session', requireAdmin, (_req, res) => {
