@@ -42,7 +42,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
         run: |
-          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund --foreground-scripts --loglevel=verbose
           test -x node_modules/.bin/prisma
           npm run db:generate
           npm test
