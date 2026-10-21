@@ -2,7 +2,7 @@ services:
   - type: web
     name: lenzpay-api
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run db:generate
     preDeployCommand: npm run db:migrate
     startCommand: npm start
