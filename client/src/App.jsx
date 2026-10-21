@@ -7,6 +7,7 @@ import Overview from './components/Overview.jsx';
 import MerchantManager from './components/MerchantManager.jsx';
 import TransactionStream from './components/TransactionStream.jsx';
 import ApiDocs from './components/ApiDocs.jsx';
+import PayoutQueue from './components/PayoutQueue.jsx';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -43,6 +44,7 @@ export default function App() {
     overview: <Overview onNavigate={setPage} />,
     merchants: <MerchantManager notify={notify} />,
     transactions: <TransactionStream />,
+    payouts: <PayoutQueue notify={notify} />,
     docs: <ApiDocs />,
   }[page];
 

@@ -1,9 +1,10 @@
-import { Activity, BookOpenText, CircleHelp, Command, CreditCard, LayoutDashboard, LogOut, Store } from 'lucide-react';
+import { Activity, BookOpenText, CircleHelp, Command, CreditCard, LayoutDashboard, LogOut, Store, WalletCards } from 'lucide-react';
 
 const navigation = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'merchants', label: 'Client merchants', icon: Store },
   { id: 'transactions', label: 'Transactions', icon: Activity },
+  { id: 'payouts', label: 'Payouts', icon: WalletCards },
   { id: 'docs', label: 'API & playground', icon: BookOpenText },
 ];
 

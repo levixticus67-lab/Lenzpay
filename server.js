@@ -9,6 +9,7 @@ import { HttpError } from './lib/http.js';
 import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
 import { merchantsRouter } from './routes/merchants.js';
+import { payoutsRouter } from './routes/payouts.js';
 import { requireAdmin, requireAllowedAdminOrigin } from './middleware/auth.js';
 import { startReconciliationWorker } from './services/reconciliation.js';
 
@@ -37,6 +38,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/merchants', requireAllowedAdminOrigin, requireAdmin, merchantsRouter);
+app.use('/api/admin/payouts', requireAllowedAdminOrigin, requireAdmin, payoutsRouter);
 
 app.use((_req, _res, next) => next(new HttpError(404, 'NOT_FOUND', 'Endpoint not found')));
 app.use((error, req, res, _next) => {

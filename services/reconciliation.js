@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma.js';
 import { getEnv } from '../lib/env.js';
 import { assertProviderConfigured, lookupProviderStatus } from './providers.js';
 import { postSplitLedger } from './ledger.js';
+import { reconcilePendingPayouts } from './payouts.js';
 
 async function recordVerifiedStatus(payment, status) {
   return prisma.$transaction(async (tx) => {
@@ -102,7 +103,19 @@ export function startReconciliationWorker() {
     if (running) return;
     running = true;
     try {
-      await reconcilePendingPayments();
+      const results = await Promise.allSettled([
+        reconcilePendingPayments(),
+        reconcilePendingPayouts(),
+      ]);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          console.error(JSON.stringify({
+            level: 'error',
+            code: 'RECONCILIATION_FAILED',
+            name: result.reason?.name ?? 'Error',
+          }));
+        }
+      }
     } catch (error) {
       console.error(JSON.stringify({
         level: 'error',

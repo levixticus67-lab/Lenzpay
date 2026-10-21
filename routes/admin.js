@@ -44,7 +44,7 @@ adminRouter.post('/logout', requireAllowedAdminOrigin, requireAdmin, (_req, res)
 adminRouter.use(requireAllowedAdminOrigin, requireAdmin);
 
 adminRouter.get('/overview', asyncHandler(async (_req, res) => {
-  const [volume, commissions, activeMerchants, transactions] = await Promise.all([
+  const [volume, commissions, activeMerchants, transactions, openPayouts] = await Promise.all([
     prisma.paymentTransaction.aggregate({
       where: { status: 'SUCCESSFUL' },
       _sum: { totalAmount: true },
@@ -55,12 +55,16 @@ adminRouter.get('/overview', asyncHandler(async (_req, res) => {
     }),
     prisma.merchant.count({ where: { status: 'ACTIVE' } }),
     prisma.paymentTransaction.count(),
+    prisma.payout.count({
+      where: { status: { in: ['AWAITING_APPROVAL', 'SUBMITTING', 'PENDING', 'REVIEW_REQUIRED'] } },
+    }),
   ]);
   res.json({
     totalVolume: volume._sum.totalAmount?.toString() ?? '0.00',
     totalCommissions: commissions._sum.amount?.toString() ?? '0.00',
     activeMerchants,
     transactionCount: transactions,
+    openPayouts,
   });
 }));
 

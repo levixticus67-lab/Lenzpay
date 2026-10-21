@@ -1,4 +1,5 @@
 import { getEnv } from '../lib/env.js';
+import { constants, publicEncrypt } from 'node:crypto';
 
 class ProviderError extends Error {
   constructor(stage, status = 502) {
@@ -103,5 +104,100 @@ export async function getAirtelTransaction(reference) {
       },
     },
     'status_lookup',
+  );
+}
+
+function normalizePublicKey(value) {
+  const trimmed = value.trim().replace(/\\n/g, '\n');
+  if (trimmed.includes('BEGIN PUBLIC KEY')) return trimmed;
+  const body = trimmed.replace(/\s+/g, '');
+  return `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`;
+}
+
+function encryptAirtelPin() {
+  const env = getEnv();
+  try {
+    const key = normalizePublicKey(env.AIRTEL_DISBURSEMENT_RSA_PUBLIC_KEY);
+    const options = env.AIRTEL_PIN_ENCRYPTION_MODE === 'pkcs1'
+      ? { key, padding: constants.RSA_PKCS1_PADDING }
+      : { key, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' };
+    return publicEncrypt(options, Buffer.from(env.AIRTEL_DISBURSEMENT_PIN, 'utf8')).toString('base64');
+  } catch {
+    const error = new ProviderError('pin_encryption', 400);
+    error.definitive = true;
+    throw error;
+  }
+}
+
+export async function submitAirtelPayout({ amount, destination, reference }) {
+  const env = getEnv();
+  const token = await getAccessToken();
+  const version = env.AIRTEL_DISBURSEMENT_API_VERSION;
+  const pin = encryptAirtelPin();
+  const body = version === 'v2'
+    ? {
+        payee: { currency: 'UGX', msisdn: destination },
+        reference,
+        pin,
+        transaction: { amount: Number(amount.toFixed(2)), id: reference, type: 'B2C' },
+      }
+    : {
+        payee: { msisdn: destination, wallet_type: env.AIRTEL_DISBURSEMENT_WALLET_TYPE },
+        reference,
+        pin,
+        transaction: { amount: Number(amount.toFixed(2)), id: reference, type: 'B2C' },
+      };
+  const url = version === 'v2'
+    ? `${airtelBaseUrl()}/standard/v2/disbursements/`
+    : `${airtelBaseUrl()}/standard/v3/disbursements`;
+  const result = await requestJson(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: '*/*',
+        'X-Country': 'UG',
+        'X-Currency': 'UGX',
+      },
+      body: JSON.stringify(body),
+    },
+    'disbursement',
+  );
+  const code = result?.status?.response_code;
+  if (
+    result?.status?.success === true ||
+    ['DP00900001000', 'DP00900001001', 'DP00900001006', 'DP00900001014'].includes(code)
+  ) {
+    return;
+  }
+  const error = new ProviderError('disbursement', 502);
+  error.definitive = Boolean(code && !['DP00900001000', 'DP00900001006', 'DP00900001014'].includes(code));
+  throw error;
+}
+
+export async function getAirtelPayout(reference) {
+  const env = getEnv();
+  const token = await getAccessToken();
+  const version = env.AIRTEL_DISBURSEMENT_API_VERSION;
+  const url = new URL(
+    version === 'v2'
+      ? `${airtelBaseUrl()}/standard/v2/disbursements/${encodeURIComponent(reference)}`
+      : `${airtelBaseUrl()}/standard/v3/disbursements/${encodeURIComponent(reference)}`,
+  );
+  if (version === 'v2') url.searchParams.set('transactionType', 'B2C');
+  return requestJson(
+    url.toString(),
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: '*/*',
+        'X-Country': 'UG',
+        'X-Currency': 'UGX',
+      },
+    },
+    'disbursement_status_lookup',
   );
 }

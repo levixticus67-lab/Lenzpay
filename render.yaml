@@ -4,7 +4,8 @@ services:
     runtime: node
     plan: starter
     buildCommand: npm ci && npm run db:generate
-    startCommand: npm run db:migrate && npm start
+    preDeployCommand: npm run db:migrate
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -25,6 +26,8 @@ services:
         sync: false
       - key: AGENCY_COMMISSION_WALLET_MSISDN
         sync: false
+      - key: AGENCY_COMMISSION_WALLET_PROVIDER
+        sync: false
       - key: DEVELOPER_COMMISSION_RATE
         value: "0.025"
       - key: MIN_PAYMENT_AMOUNT
@@ -39,5 +42,21 @@ services:
         value: https://lenzpay-api.onrender.com
       - key: MTN_TARGET_ENV
         value: sandbox
+      - key: MTN_DISBURSEMENT_API_ENABLED
+        value: "false"
+      - key: MTN_DISBURSEMENT_SUBSCRIPTION_KEY
+        sync: false
       - key: AIRTEL_ENV
         value: sandbox
+      - key: AIRTEL_DISBURSEMENT_API_ENABLED
+        value: "false"
+      - key: AIRTEL_DISBURSEMENT_API_VERSION
+        sync: false
+      - key: AIRTEL_DISBURSEMENT_PIN
+        sync: false
+      - key: AIRTEL_DISBURSEMENT_RSA_PUBLIC_KEY
+        sync: false
+      - key: AIRTEL_DISBURSEMENT_WALLET_TYPE
+        sync: false
+      - key: AIRTEL_PIN_ENCRYPTION_MODE
+        sync: false

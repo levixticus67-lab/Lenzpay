@@ -28,6 +28,15 @@ enum LedgerKind {
   MERCHANT_NET
 }
 
+enum PayoutStatus {
+  AWAITING_APPROVAL
+  SUBMITTING
+  PENDING
+  SUCCESSFUL
+  FAILED
+  REVIEW_REQUIRED
+}
+
 model Merchant {
   id                    String               @id @default(cuid())
   name                  String
@@ -41,6 +50,7 @@ model Merchant {
   credentials           ApiCredential[]
   transactions          PaymentTransaction[]
   ledgerEntries         LedgerEntry[]
+  payouts               Payout[]
 
   @@index([status, createdAt])
   @@map("merchants")
@@ -79,6 +89,7 @@ model PaymentTransaction {
   merchant              Merchant          @relation(fields: [merchantId], references: [id], onDelete: Restrict)
   ledgerEntries         LedgerEntry[]
   webhookEvents         WebhookEvent[]
+  payouts               Payout[]
 
   @@unique([merchantId, orderId])
   @@index([status, createdAt])
@@ -98,10 +109,51 @@ model LedgerEntry {
   createdAt     DateTime           @default(now()) @map("created_at")
   transaction   PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
   merchant      Merchant           @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  payout        Payout?
 
   @@unique([transactionId, kind])
   @@index([merchantId, kind, createdAt])
   @@map("ledger_entries")
+}
+
+model Payout {
+  id                          String             @id @default(uuid())
+  ledgerEntryId               String             @unique @map("ledger_entry_id")
+  transactionId               String             @map("transaction_id")
+  merchantId                  String             @map("merchant_id")
+  kind                        LedgerKind
+  provider                    PaymentProvider
+  amount                      Decimal            @db.Decimal(18, 2)
+  currency                    String             @default("UGX")
+  destination                 String
+  providerReference           String             @unique @map("provider_reference")
+  status                      PayoutStatus       @default(AWAITING_APPROVAL)
+  submittedBy                 String?            @map("submitted_by")
+  submittedAt                 DateTime?          @map("submitted_at")
+  manualConfirmationReference String?            @map("manual_confirmation_reference")
+  lastStatusCheckAt           DateTime?          @map("last_status_check_at")
+  createdAt                   DateTime           @default(now()) @map("created_at")
+  updatedAt                   DateTime           @updatedAt @map("updated_at")
+  ledgerEntry                 LedgerEntry        @relation(fields: [ledgerEntryId], references: [id], onDelete: Restrict)
+  transaction                 PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  merchant                    Merchant           @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  events                      PayoutEvent[]
+
+  @@index([status, createdAt])
+  @@index([provider, status, lastStatusCheckAt])
+  @@map("payouts")
+}
+
+model PayoutEvent {
+  id        String   @id @default(cuid())
+  payoutId  String   @map("payout_id")
+  actor     String?
+  outcome   String
+  createdAt DateTime @default(now()) @map("created_at")
+  payout    Payout   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+
+  @@index([payoutId, createdAt])
+  @@map("payout_events")
 }
 
 model WebhookEvent {

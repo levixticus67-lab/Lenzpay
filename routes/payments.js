@@ -10,10 +10,12 @@ import { checkoutLimiter, webhookLimiter } from '../middleware/rateLimits.js';
 import {
   assertProviderConfigured,
   collectPayment,
+  lookupPayoutStatus,
   lookupProviderStatus,
   ProviderConfigurationError,
 } from '../services/providers.js';
 import { postSplitLedger } from '../services/ledger.js';
+import { applyVerifiedPayoutStatus } from '../services/payouts.js';
 
 export const paymentsRouter = Router();
 
@@ -184,6 +186,37 @@ function providerFrom(req) {
   const normalized = value.toUpperCase();
   return ['MTN', 'AIRTEL'].includes(normalized) ? normalized : null;
 }
+
+paymentsRouter.post(
+  '/payout-webhook/:provider',
+  webhookLimiter,
+  asyncHandler(async (req, res) => {
+    const provider = providerFrom(req);
+    const reference = providerReferenceFrom(req.body);
+    if (!provider || !reference) {
+      throw new HttpError(400, 'INVALID_WEBHOOK', 'A provider and payout reference are required');
+    }
+    const payout = await prisma.payout.findUnique({ where: { providerReference: reference } });
+    if (!payout || payout.provider !== provider) {
+      throw new HttpError(404, 'PAYOUT_NOT_FOUND', 'No matching payout was found');
+    }
+    let verifiedStatus;
+    try {
+      // Provider callback bodies are hints only; verify against the provider API.
+      verifiedStatus = await lookupPayoutStatus(provider, reference);
+    } catch {
+      return res.status(503).json({
+        error: { code: 'PAYOUT_STATUS_LOOKUP_UNAVAILABLE', message: 'Provider verification is temporarily unavailable; retry the callback' },
+      });
+    }
+    const outcome = await applyVerifiedPayoutStatus(payout, verifiedStatus, 'PAYOUT_WEBHOOK');
+    return res.status(verifiedStatus === 'PENDING' ? 202 : 200).json({
+      received: true,
+      verifiedStatus,
+      outcome,
+    });
+  }),
+);
 
 paymentsRouter.post(
   ['/webhook', '/webhook/:provider'],

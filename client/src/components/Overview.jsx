@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleDollarSign, Radio, RefreshCw, Store, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleDollarSign, Radio, RefreshCw, Store, Wallet, WalletCards } from 'lucide-react';
 import { api, formatDate, formatUgx } from '../api.js';
 
 function StatCard({ label, value, detail, icon: Icon, tone = 'indigo' }) {
@@ -62,11 +62,12 @@ export default function Overview({ onNavigate }) {
         <button onClick={refresh} className="btn-quiet text-xs"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>
       </div>
       {error && <div className="rounded-xl border border-rose-300/15 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Successful volume" value={formatUgx(summary?.totalVolume)} detail="Confirmed payments only" icon={CircleDollarSign} tone="indigo" />
         <StatCard label="Agency commission" value={formatUgx(summary?.totalCommissions)} detail="Ledgered commission entries" icon={Wallet} tone="violet" />
         <StatCard label="Active merchants" value={summary?.activeMerchants ?? '—'} detail="Enabled to accept checkout requests" icon={Store} tone="cyan" />
         <StatCard label="All transactions" value={summary?.transactionCount ?? '—'} detail="Pending, successful, and failed" icon={Radio} tone="emerald" />
+        <StatCard label="Open payouts" value={summary?.openPayouts ?? '—'} detail="Instructions not yet settled" icon={WalletCards} tone="cyan" />
       </section>
 
       <section className="glass overflow-hidden rounded-2xl">
