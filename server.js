@@ -16,6 +16,7 @@ import { startReconciliationWorker } from './services/reconciliation.js';
 const env = getEnv();
 const app = express();
 let reconciliationTimer;
+let keepAliveTimer;
 
 if (env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -67,6 +68,31 @@ const server = app.listen(env.PORT, async () => {
     await prisma.$connect();
     console.log(`Lenzpay API listening on port ${env.PORT}`);
     reconciliationTimer = startReconciliationWorker();
+    let keepAliveBaseUrl = (
+      process.env.RENDER_EXTERNAL_URL ||
+      process.env.BACKEND_URL ||
+      process.env.PAYMENT_WEBHOOK_BASE_URL ||
+      ""
+    ).trim();
+    while (keepAliveBaseUrl.endsWith("/")) {
+      keepAliveBaseUrl = keepAliveBaseUrl.slice(0, -1);
+    }
+    if (keepAliveBaseUrl) {
+      // Best-effort Render free-tier keep-alive; paid compute is needed for reliable always-on uptime.
+      keepAliveTimer = setInterval(() => {
+        fetch(keepAliveBaseUrl + "/api/health", { signal: AbortSignal.timeout(10_000) })
+          .then((response) => {
+            if (!response.ok) console.warn("Keep-alive ping returned HTTP " + response.status);
+            return response.arrayBuffer();
+          })
+          .catch(() => console.warn("Keep-alive ping failed"));
+      }, 5 * 60 * 1000);
+      keepAliveTimer.unref();
+      console.log("Keep-alive pinger started (5 min interval)");
+    } else {
+      console.warn("Render service URL unavailable; keep-alive pinger disabled");
+    }
+
   } catch (error) {
     console.error(JSON.stringify({ level: 'error', code: 'DATABASE_CONNECTION_FAILED', name: error.name }));
     server.close(() => process.exit(1));
@@ -76,6 +102,7 @@ const server = app.listen(env.PORT, async () => {
 async function shutdown(signal) {
   console.log(`Received ${signal}; shutting down`);
   if (reconciliationTimer) clearInterval(reconciliationTimer);
+  if (keepAliveTimer) clearInterval(keepAliveTimer);
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);
