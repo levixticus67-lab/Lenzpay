@@ -36,6 +36,7 @@ jobs:
       - name: Run API unit tests
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DIRECT_URL: postgresql://test:test@localhost:5432/test
         run: |
           npm ci --no-audit --no-fund
           test -x node_modules/.bin/prisma

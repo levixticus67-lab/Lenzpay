@@ -16,7 +16,7 @@ Lenzpay is a multi-tenant mobile-money collection API and operator/developer das
 - A bounded background reconciliation worker checks stale pending collections with provider status APIs.
 - Admin login, merchant registration/key rotation, overview totals, and a polling transaction stream.
 - A Vercel rewrite to the Render API so dashboard requests and the HttpOnly admin cookie can use the same browser origin.
-- GitHub Actions tests API utilities and builds the frontend; an opt-in job deploys the Vercel production build. Render's Blueprint runs Prisma migrations in its pre-deploy phase.
+- GitHub Actions tests API utilities and builds the frontend; an opt-in job deploys the Vercel production build. Render's start command runs Prisma migrations using a direct database URL before starting the API.
 
 ## Local development
 
@@ -107,16 +107,17 @@ Enable a provider only after its Uganda account has approved the exact disbursem
 
 The repository includes `render.yaml`. Create the Neon database first, then:
 
-1. In Neon, create a PostgreSQL project/database and copy its **pooled** connection string. Require SSL (`sslmode=require`). Keep the connection string private.
-2. In Render, choose **New → Blueprint** and select this repository. The blueprint defines the `lenzpay-api` web service, Node runtime, health check, and migration pre-deploy command. Use a paid always-on service for production rather than a sleeping/free instance.
+1. In Neon, create a PostgreSQL project/database and copy both the **pooled** and **direct** connection strings. Require SSL (`sslmode=require`); the direct URL hostname must not include `-pooler`. Keep both connection strings private.
+2. In Render, choose **New → Blueprint** and select this repository. The blueprint defines the `lenzpay-api` web service, Node runtime, health check, and the migration command that runs before the API starts. Use a paid always-on service for production rather than a sleeping/free instance.
 3. Set the prompted Render environment values:
-   - `DATABASE_URL`: Neon pooled connection string.
+   - `DATABASE_URL`: Neon pooled connection string for runtime queries.
+   - `DIRECT_URL`: Neon direct (non-pooled) connection string for Prisma migrations.
    - `ADMIN_EMAIL`: operator login email.
    - `ADMIN_PASSWORD_HASH`: generate locally with `npm run admin:hash`; paste the hash output, not the password.
     - `AGENCY_COMMISSION_WALLET_MSISDN` and `AGENCY_COMMISSION_WALLET_PROVIDER`: destination recorded for the commission payout instruction, e.g. the agency's Uganda wallet number and its actual operator.
    - `CORS_ORIGINS`: exact dashboard origin(s), comma-separated, e.g. `https://your-dashboard.vercel.app`. The blueprint generates `SESSION_SECRET` and `CLIENT_SECRET_PEPPER`.
     - Leave MTN/Airtel credentials unset and both disbursement API flags `false` until provider onboarding is complete. The service starts without provider credentials; checkout for an unconfigured provider returns `503`.
-4. Deploy and wait for the health check. Verify `https://lenzpay-api.onrender.com/api/health` returns `{"status":"ok"}`. Render runs `prisma migrate deploy` as a pre-deploy command before starting the new service version.
+4. Deploy and wait for the health check. Verify `https://lenzpay-api.onrender.com/api/health` returns `{"status":"ok"}`. The start command runs `prisma migrate deploy` using `DIRECT_URL` before starting the API.
 5. For local/testing provider callbacks, set `PAYMENT_WEBHOOK_BASE_URL` to the API's public origin. Configure the exact callback URLs in the provider console. Airtel callbacks must be configured in the provider portal.
 
 If Render assigns a different service hostname, update `client/vercel.json`'s rewrite destination and `PAYMENT_WEBHOOK_BASE_URL`.
@@ -186,13 +187,13 @@ The API also rechecks older `PENDING` transactions on a bounded schedule (`RECON
 - Do not enable an API payout flag until the provider contract and Uganda account access explicitly permit the corresponding endpoint and authorization flow.
 - Use provider-level two-person approval when required; the Lenzpay admin is a single configured account and is not a substitute for a provider's treasury controls.
 - Do not enable a merchant for production until provider production credentials exist and the intended funds flow is verified. The `app_live_...` client ID means the credential is active; it does **not** mean provider production mode is enabled.
-- Render applies `prisma migrate deploy` in the pre-deploy stage; verify the migration completed before using the API.
+- Render applies `prisma migrate deploy` before the API starts, using `DIRECT_URL`; verify the migration completed before using the API.
 
 ## Verification
 
 ```sh
 # API schema and utility tests
-DATABASE_URL='postgresql://test:test@localhost:5432/test' npx prisma validate
+DATABASE_URL='postgresql://test:test@localhost:5432/test' DIRECT_URL='postgresql://test:test@localhost:5432/test' npx prisma validate
 npm test
 npm audit
 
